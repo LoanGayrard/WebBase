@@ -1,0 +1,14 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+WORKDIR /src
+
+ENV ASPNETCORE_URLS=http://+:8080
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
+EXPOSE 8080
+
+# Restore (cache Docker)
+COPY Api/Api.csproj Api/
+RUN dotnet restore Api/Api.csproj
+
+# Le code est monté en volume par docker-compose, donc pas besoin de COPY . .
+WORKDIR /src/Api
+CMD ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:8080"]

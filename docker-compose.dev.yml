@@ -1,0 +1,47 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: app_postgres
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Api/Dockerfile.dev
+    container_name: app_api
+    depends_on:
+      - postgres
+    env_file:
+      - .env
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT}
+
+      # EF Core
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD}
+
+      # JWT
+      Jwt__Issuer: ${JWT_ISSUER}
+      Jwt__Audience: ${JWT_AUDIENCE}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY}
+      Jwt__ExpiresMinutes: ${JWT_EXPIRES_MINUTES}
+
+      # Hot reload fiable dans Docker
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+    ports:
+      - "${API_PORT}:8080"
+    volumes:
+      - ./backend:/src
+      - nuget_cache:/root/.nuget/packages
+
+volumes:
+  pgdata:
+  nuget_cache:
