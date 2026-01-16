@@ -1,7 +1,6 @@
 using Api.Auth;
 using Api.Data;
 using Api.Data.Entities;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -38,24 +37,25 @@ var jwtAudience = builder.Configuration["Jwt:Audience"]!;
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]!;
 var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSigningKey));
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(opt =>
-    {
-        opt.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidIssuer = jwtIssuer,
-            ValidateAudience = true,
-            ValidAudience = jwtAudience,
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = key,
-            ValidateLifetime = true
-        };
-    });
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
+})
+.AddIdentityCookies();
+
+builder.Services.AddAuthentication()
+    .AddBearerToken(IdentityConstants.BearerScheme);
+
+builder.Services.ConfigureApplicationCookie(o =>
+{
+    o.Cookie.HttpOnly = true;
+    o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    o.Cookie.SameSite = SameSiteMode.None;
+});
 
 builder.Services.AddAuthorization();
-
-builder.Services.AddScoped<JwtTokenService>();
 
 builder.Services.AddCors(opt =>
 {
@@ -63,20 +63,25 @@ builder.Services.AddCors(opt =>
         p.WithOrigins("http://localhost:5173")
          .AllowAnyHeader()
          .AllowAnyMethod()
+         .AllowCredentials()
     );
 });
 
+var isDev = builder.Environment.IsDevelopment();
+
+if (isDev)
+{
+    builder.Services.AddSingleton(typeof(IEmailSender<>), typeof(DevEmailSender<>));
+}
+
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+if (isDev)
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-
     app.UseCors("DevCors");
 
-    // Auto apply migrations (only in development)
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
@@ -84,9 +89,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+
 app.UseAuthorization();
 
-app.UseAuthentication();
+app.MapGroup("/auth").MapIdentityApi<AppUser>();
 
 app.MapControllers();
 
