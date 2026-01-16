@@ -10,14 +10,9 @@ namespace Api.Controllers;
 [ApiController]
 [Route("api/todos")]
 [Authorize]
-public class TodoController : ControllerBase
+public class TodoController(AppDbContext db) : ControllerBase
 {
-    private readonly AppDbContext _db;
-
-    public TodoController(AppDbContext db)
-    {
-        _db = db;
-    }
+    private readonly AppDbContext _db = db;
 
     [HttpGet]
     [ProducesResponseType(typeof(List<TodoResponse>), StatusCodes.Status200OK)]

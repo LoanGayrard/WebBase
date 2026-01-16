@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + "/api/auth";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + "/auth";
 
 export type RegisterPayload = {
   email: string;
@@ -12,9 +12,7 @@ export type LoginPayload = {
 
 export type MeResponse = {
   email: string;
-  userName?: string;
-  id?: string;
-  roles?: string[];
+  isEmailConfirmed: boolean;
 } | null;
 
 async function readError(res: Response): Promise<string> {
@@ -34,7 +32,7 @@ export async function register(payload: RegisterPayload): Promise<void> {
 }
 
 export async function login(payload: LoginPayload): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/login`, {
+  const res = await fetch(`${API_BASE_URL}/login?useCookies=true&useSessionCookies=false`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "include",
@@ -54,13 +52,12 @@ export async function logout(): Promise<void> {
 }
 
 export async function me(): Promise<MeResponse> {
-  const res = await fetch(`${API_BASE_URL}/me`, {
+  const res = await fetch(`${API_BASE_URL}/manage/info`, {
     credentials: "include",
   });
 
   if (!res.ok) return null;
 
-  // Ton backend peut renvoyer un objet user ou juste 204.
   const text = await res.text();
   if (!text) return null;
   return JSON.parse(text) as MeResponse;

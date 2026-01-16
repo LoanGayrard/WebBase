@@ -8,6 +8,8 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var isDev = builder.Environment.IsDevelopment();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -30,6 +32,11 @@ builder.Services.AddIdentityCore<AppUser>(opt =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddSignInManager()
 .AddDefaultTokenProviders();
+string tokenName = isDev ? "dev-webbase-auth" : "__Host-webbase-auth";
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.Cookie.Name = tokenName;
+});
 
 // JWT auth
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
@@ -67,8 +74,6 @@ builder.Services.AddCors(opt =>
     );
 });
 
-var isDev = builder.Environment.IsDevelopment();
-
 if (isDev)
 {
     builder.Services.AddSingleton(typeof(IEmailSender<>), typeof(DevEmailSender<>));
@@ -93,7 +98,7 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
-app.MapGroup("/auth").MapIdentityApi<AppUser>();
+app.MapGroup("/auth").MapIdentityApi<AppUser>().WithTags("Auth");
 
 app.MapControllers();
 
