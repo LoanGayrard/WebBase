@@ -57,6 +57,15 @@ builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<JwtTokenService>();
 
+builder.Services.AddCors(opt =>
+{
+    opt.AddPolicy("DevCors", p =>
+        p.WithOrigins("http://localhost:5173")
+         .AllowAnyHeader()
+         .AllowAnyMethod()
+    );
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -64,6 +73,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    app.UseCors("DevCors");
 
     // Auto apply migrations (only in development)
     using var scope = app.Services.CreateScope();
